@@ -1,0 +1,177 @@
+cat > /mnt/user-data/outputs/index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HYSACAM - Gestion Intelligente des Bacs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header>
+    <div class="header-left">
+      <div class="logo-icon">🗑</div>
+      <div>
+        <h1 class="header-title">Système Intelligent de Gestion des Déchets</h1>
+        <p class="header-sub">Douala, Cameroun — HYSACAM Dashboard</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge">● TEMPS RÉEL</div>
+      <div class="header-time" id="clock">--:--:--</div>
+      <!-- Bouton admin discret -->
+      <button class="btn-admin" onclick="toggleAdmin()" title="Administration">⚙</button>
+    </div>
+  </header>
+
+  <!-- ===== PANNEAU ADMIN (caché par défaut) ===== -->
+  <div class="admin-overlay" id="adminOverlay" onclick="fermerAdmin(event)">
+    <div class="admin-panel">
+      <div class="admin-header">
+        <h2 class="admin-title">⚙ Administration du bac</h2>
+        <button class="admin-close" onclick="toggleAdmin()">✕</button>
+      </div>
+
+      <div class="admin-body">
+
+        <!-- Localisation -->
+        <div class="admin-section">
+          <div class="admin-section-title">📍 Localisation du bac</div>
+          <p class="admin-hint">Clique directement sur la carte ci-dessous pour placer le bac, ou entre les coordonnées manuellement.</p>
+          <div id="adminMap"></div>
+          <div class="admin-row">
+            <div class="admin-field">
+              <label>Latitude</label>
+              <input type="number" id="inputLat" placeholder="ex: 4.0520" step="0.0001"/>
+            </div>
+            <div class="admin-field">
+              <label>Longitude</label>
+              <input type="number" id="inputLng" placeholder="ex: 9.7100" step="0.0001"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Informations du bac -->
+        <div class="admin-section">
+          <div class="admin-section-title">🗑 Informations du bac</div>
+          <div class="admin-field">
+            <label>Nom du bac</label>
+            <input type="text" id="inputNom" placeholder="ex: Bac Marché Sandaga"/>
+          </div>
+          <div class="admin-field">
+            <label>Niveau de remplissage (%) — En attente Arduino</label>
+            <input type="number" id="inputNiveau" placeholder="Laisse vide si Arduino pas connecté" min="0" max="100"/>
+          </div>
+        </div>
+
+        <!-- Bouton sauvegarder -->
+        <button class="btn-save" onclick="sauvegarderBac()">
+          💾 SAUVEGARDER DANS FIREBASE
+        </button>
+
+        <div class="admin-feedback" id="adminFeedback"></div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LAYOUT PRINCIPAL ===== -->
+  <div class="layout">
+
+    <!-- PANNEAU GAUCHE -->
+    <div class="panel-left">
+      <div class="section">
+        <p class="section-title">Vue d'ensemble</p>
+        <div class="stats-grid">
+          <div class="stat-box total">
+            <div class="stat-num" id="stat-total">0</div>
+            <div class="stat-label">Total bacs</div>
+          </div>
+          <div class="stat-box dispo">
+            <div class="stat-num" id="stat-dispo">0</div>
+            <div class="stat-label">Disponibles</div>
+          </div>
+          <div class="stat-box alerte">
+            <div class="stat-num" id="stat-alerte">0</div>
+            <div class="stat-label">Alertes</div>
+          </div>
+          <div class="stat-box urgent">
+            <div class="stat-num" id="stat-urgent">0</div>
+            <div class="stat-label">Urgents</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Itinéraire optimal</p>
+        <select class="depot-select" id="depotSelect">
+          <option value="">— Choisir un dépôt —</option>
+          <option value="d1">Dépôt Akwa</option>
+          <option value="d2">Dépôt Bonabéri</option>
+          <option value="d3">Dépôt Deido</option>
+        </select>
+        <button class="btn-route" onclick="generateRoute()">🗺 GÉNÉRER L'ITINÉRAIRE</button>
+      </div>
+
+      <div class="section">
+        <p class="section-title">État des bacs</p>
+        <div id="bacList"></div>
+      </div>
+    </div>
+
+    <!-- CARTE -->
+    <div id="map"></div>
+
+    <!-- PANNEAU DROIT -->
+    <div class="panel-right">
+      <div class="section">
+        <p class="section-title">Bac sélectionné</p>
+        <div class="selected-card">
+          <div class="sel-id" id="sel-id">—</div>
+          <div class="sel-name" id="sel-name">Cliquez sur un bac</div>
+          <div class="level-bar-bg">
+            <div class="level-bar-fill" id="sel-bar" style="width:0%"></div>
+          </div>
+          <div class="level-label">
+            <span id="sel-etat">—</span>
+            <span id="sel-pct">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Historique 7 jours</p>
+        <div class="chart-bars" id="histChart"></div>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Commande du jour</p>
+        <div id="cmdList"></div>
+      </div>
+
+      <div class="section">
+        <p class="section-title">Détails de la tournée</p>
+        <div id="routeStats" class="route-stats">
+          Générez un itinéraire pour voir les détails.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== SCRIPTS ===== -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+  <script src="firebase.js"></script>
+  <script src="route.js"></script>
+  <script src="app.js"></script>
+  <script src="admin.js"></script>
+
+</body>
+</html>
+EOF
