@@ -2,11 +2,10 @@ const depots = [
   { id: 'd1', nom: 'Dépôt Akwa',     lat: 4.0511, lng: 9.7085 },
   { id: 'd2', nom: 'Dépôt Bonabéri', lat: 4.0650, lng: 9.6700 },
   { id: 'd3', nom: 'Dépôt Deido',    lat: 4.0700, lng: 9.7200 },
+  { id: 'd4', nom: 'Dépôt pk10',    lat: 4.0550, lng: 9.7850 },
+  { id: 'd5', nom: 'Dépôt bassa',    lat: 4.0611918, lng: 9.6870461 },
 ];
 
-// ===========================
-// UTILITAIRES
-// ===========================
 function getEtat(niveau) {
   if (niveau === null || niveau === undefined)
     return { label: 'EN ATTENTE DE DONNÉES', color: '#607d8b', cat: 'attente' };
